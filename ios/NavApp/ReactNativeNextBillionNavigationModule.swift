@@ -22,10 +22,6 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule {
     
     // MARK: - React Native Methods
     
-    @objc
-    func testModule(_ resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
-        resolver("Module is working!")
-    }
     
     @objc
     func launchNavigation(_ destination: NSArray, options: NSDictionary?, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {

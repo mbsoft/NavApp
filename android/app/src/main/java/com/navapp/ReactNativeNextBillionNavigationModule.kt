@@ -22,11 +22,6 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
     }
     
     @ReactMethod
-    fun testModule(promise: Promise) {
-        promise.resolve("Android module is working!")
-    }
-    
-    @ReactMethod
     fun launchNavigation(destination: ReadableArray, options: ReadableMap?, promise: Promise) {
         try {
             val activity = reactApplicationContext.currentActivity

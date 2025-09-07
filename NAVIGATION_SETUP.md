@@ -135,8 +135,6 @@ The app now includes a "Start Navigation" button that will:
 - `dismissNavigation(): Promise<void>`
   - Dismisses the current navigation session
 
-- `testModule(): Promise<string>`
-  - Tests the native module connection
 
 #### NavigationOptions
 

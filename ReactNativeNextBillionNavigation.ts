@@ -1,4 +1,4 @@
-import { NativeModules, NativeEventEmitter, Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 
 export interface NavigationOptions {
   mode?: 'car' | 'truck';
@@ -13,7 +13,6 @@ export interface NavigationOptions {
 }
 
 export interface NavigationModule {
-  testModule(): Promise<string>;
   launchNavigation(destination: [number, number], options?: NavigationOptions): Promise<void>;
   dismissNavigation(): Promise<void>;
 }
