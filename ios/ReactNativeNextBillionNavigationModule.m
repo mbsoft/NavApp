@@ -2,6 +2,9 @@
 
 @interface RCT_EXTERN_MODULE(ReactNativeNextBillionNavigation, NSObject)
 
+RCT_EXTERN_METHOD(testModule:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 RCT_EXTERN_METHOD(launchNavigation:(NSArray *)destination
                   options:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
