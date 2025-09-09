@@ -647,49 +647,6 @@ function AppContent() {
           )}
         </View>
 
-        {/* Location Status Display */}
-        <View style={styles.locationStatusContainer}>
-          <Text style={styles.locationStatusLabel}>Origin:</Text>
-          {isLocationLoading ? (
-            <View style={styles.locationLoadingContainer}>
-              <ActivityIndicator size="small" color="#007AFF" />
-              <Text style={styles.locationStatusText}>Getting your location...</Text>
-            </View>
-          ) : locationPermissionGranted && currentLocation ? (
-            <View style={styles.locationStatusContainer}>
-              {isReverseGeocoding ? (
-                <View style={styles.locationLoadingContainer}>
-                  <ActivityIndicator size="small" color="#007AFF" />
-                  <Text style={styles.locationStatusText}>Getting address...</Text>
-                </View>
-              ) : (
-                <Text style={styles.locationStatusText}>
-                  📍 {currentAddress || 'Your current location'}
-                </Text>
-              )}
-              <TouchableOpacity onPress={getCurrentLocation} style={styles.retryButton}>
-                <Text style={styles.retryButtonText}>Refresh</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.locationStatusContainer}>
-              <Text style={styles.locationStatusText}>
-                📍 {currentAddress || 'Default location (Washington, DC)'}
-              </Text>
-              <TouchableOpacity onPress={getCurrentLocation} style={styles.retryButton}>
-                <Text style={styles.retryButtonText}>Try Again</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {/* Selected Destination Display */}
-        {selectedDestination && (
-          <View style={styles.selectedOriginContainer}>
-            <Text style={styles.selectedOriginLabel}>Destination:</Text>
-            <Text style={styles.selectedOriginText}>{selectedDestination.title}</Text>
-          </View>
-        )}
         
         {isNavigationRunning ? (
           <View style={styles.navigationControlsContainer}>

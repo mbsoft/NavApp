@@ -42,6 +42,12 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule {
         }
         
         let simulate = (options["simulate"] as? Bool) ?? false
+        let mode = (options["mode"] as? String) ?? "car"
+        let units = (options["units"] as? String) ?? "imperial"
+        let routeType = (options["routeType"] as? String) ?? "fastest"
+        let avoidances = (options["avoidances"] as? [String]) ?? []
+        let truckSize = (options["truckSize"] as? [String]) ?? []
+        let truckWeight = (options["truckWeight"] as? Int) ?? 0
         
         let lat = destinationArray[0]
         let lng = destinationArray[1]
@@ -51,27 +57,45 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule {
         let olng = originArray[1]
         let originCoordinate = CLLocationCoordinate2D(latitude: olat, longitude: olng)
 
-        print("iOS: Launching NextBillion.ai navigation to: \(lat), \(lng)")
+        print("iOS: Launching NextBillion.ai navigation to: \(lat), \(lng) with mode: \(mode), units: \(units), routeType: \(routeType), avoidances: \(avoidances), truckSize: \(truckSize), truckWeight: \(truckWeight)")
         
         DispatchQueue.main.async {
-            self.startNavigation(from: originCoordinate,to: destinationCoordinate, simulate: simulate, resolver: resolver, rejecter: rejecter)
+            self.startNavigation(from: originCoordinate, to: destinationCoordinate, simulate: simulate, mode: mode, units: units, routeType: routeType, avoidances: avoidances, truckSize: truckSize, truckWeight: truckWeight, resolver: resolver, rejecter: rejecter)
         }
     }
     
-    private func startNavigation(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, simulate: Bool, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
+    private func startNavigation(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, simulate: Bool, mode: String, units: String, routeType: String, avoidances: [String], truckSize: [String], truckWeight: Int, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         // Get current location (for demo purposes, using a default location)
         let originLocation = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
         let destinationLocation = CLLocation(latitude: destination.latitude, longitude: destination.longitude)
         
         // Create route options
         let options = NavigationRouteOptions(origin: originLocation, destination: destinationLocation)
-        options.profileIdentifier = NBNavigationMode.car
+        options.profileIdentifier = (mode == "truck") ? NBNavigationMode.truck : NBNavigationMode.car
         options.includesAlternativeRoutes = true
-        options.distanceMeasurementSystem = .imperial
+        options.distanceMeasurementSystem = (units == "imperial") ? .imperial : .metric
         options.departureTime = Int(Date().timeIntervalSince1970)
         options.locale = Locale.autoupdatingCurrent
-        options.mapOption = .none
+        options.mapOption = .valhalla
         options.shapeFormat = .polyline6
+
+        // Add truck parameters if mode is truck
+        if mode == "truck" && !truckSize.isEmpty && truckWeight > 0 {
+            // Convert truck size from string array to appropriate format
+            if truckSize.count >= 3 {
+                let height = Int(Double(truckSize[0]) ?? 400.0)
+                let width = Int(Double(truckSize[1]) ?? 250.0)
+                let length = Int(Double(truckSize[2]) ?? 1200.0)
+                options.truckSize = [height, width, length]
+                options.truckWeight = truckWeight
+                print("iOS: Truck parameters - Size: \(truckSize), Weight: \(truckWeight)")
+            }
+        }
+        
+        // Add route type and avoidances
+        print("iOS: Route type: \(routeType), Avoidances: \(avoidances)")
+        // Note: NextBillion.ai iOS SDK specific route type and avoidances configuration
+        // would need to be implemented based on the SDK documentation
         
         // Fetch route
         Directions.shared.calculate(options) { [weak self] routes, error in
