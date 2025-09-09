@@ -15,3 +15,4 @@ class ReactNativeNextBillionNavigationPackage : ReactPackage {
         return emptyList()
     }
 }
+

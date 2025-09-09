@@ -10,8 +10,6 @@
 		0C80B921A6F3F58F76C31292 /* libPods-NavApp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-NavApp.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
-		8D0D83252E6DBD2700D904A6 /* ReactNativeNextBillionNavigationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D0D83242E6DBD2700D904A6 /* ReactNativeNextBillionNavigationModule.swift */; };
-		8D0D83262E6DBD2700D904A6 /* ReactNativeNextBillionNavigationModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 8D0D83232E6DBD2700D904A6 /* ReactNativeNextBillionNavigationModule.m */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		8D0D831A2E6C816500D904A6 /* NbmapCoreNavigation.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8D0D83162E6C816400D904A6 /* NbmapCoreNavigation.xcframework */; };
 		8D0D831B2E6C816500D904A6 /* NbmapCoreNavigation.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8D0D83162E6C816400D904A6 /* NbmapCoreNavigation.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -21,6 +19,8 @@
 		8D0D831F2E6C816500D904A6 /* Nbmap.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8D0D83182E6C816500D904A6 /* Nbmap.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		8D0D83202E6C816500D904A6 /* Turf.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8D0D83192E6C816500D904A6 /* Turf.xcframework */; };
 		8D0D83212E6C816500D904A6 /* Turf.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8D0D83192E6C816500D904A6 /* Turf.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		8D0D83252E6DBD2700D904A6 /* ReactNativeNextBillionNavigationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D0D83242E6DBD2700D904A6 /* ReactNativeNextBillionNavigationModule.swift */; };
+		8D0D83262E6DBD2700D904A6 /* ReactNativeNextBillionNavigationModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 8D0D83232E6DBD2700D904A6 /* ReactNativeNextBillionNavigationModule.m */; };
 		F5C96BF016F48AA3441E9141 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -235,13 +235,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-NavApp/Pods-NavApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-NavApp/Pods-NavApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -278,13 +274,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-NavApp/Pods-NavApp-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-NavApp/Pods-NavApp-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

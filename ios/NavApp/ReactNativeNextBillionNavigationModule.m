@@ -5,7 +5,8 @@
 RCT_EXTERN_METHOD(testModule:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(launchNavigation:(NSArray *)destination
+RCT_EXTERN_METHOD(launchNavigation:(NSArray *)origin
+                    destination:(NSArray *)destination
                   options:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)

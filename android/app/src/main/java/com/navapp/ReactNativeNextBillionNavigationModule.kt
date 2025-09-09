@@ -9,8 +9,11 @@ import android.os.Bundle
 import android.util.Log
 import ai.nextbillion.kits.directions.models.DirectionsResponse
 import ai.nextbillion.kits.directions.models.DirectionsRoute
+import ai.nextbillion.kits.directions.models.RouteRequestParams
 import ai.nextbillion.kits.geojson.Point
 import ai.nextbillion.navigation.ui.NBNavigation
+import ai.nextbillion.navigation.core.routefetcher.RequestParamConsts
+import ai.nextbillion.navigation.core.routefetcher.RouteFetcher
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -22,29 +25,53 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
     }
     
     @ReactMethod
-    fun launchNavigation(destination: ReadableArray, options: ReadableMap?, promise: Promise) {
+    fun launchNavigation(origin: ReadableArray, destination: ReadableArray, options: ReadableMap?, promise: Promise) {
         try {
             val activity = reactApplicationContext.currentActivity
             if (activity == null) {
                 promise.reject("NO_ACTIVITY", "No current activity available")
                 return
             }
-            
+
+            // Extract origin coordinates
+            val originLat = origin.getDouble(0)
+            val originLng = origin.getDouble(1)
+
             // Extract destination coordinates
-            val lat = destination.getDouble(0)
-            val lng = destination.getDouble(1)
+            val destLat = destination.getDouble(0)
+            val destLng = destination.getDouble(1)
+
+            // Extract units and mode settings from options
+            val units = options?.getString("units") ?: "metric"
+            val mode = options?.getString("mode") ?: "car"
             
-            Log.d("NavigationModule", "Launching NextBillion.ai navigation to: $lat, $lng")
+            // Extract truck parameters if mode is truck
+            val truckSize = if (mode == "truck") {
+                val truckSizeArray = options?.getArray("truckSize")
+                if (truckSizeArray != null && truckSizeArray.size() >= 3) {
+                    listOf(
+                        truckSizeArray.getString(0) ?: "400",
+                        truckSizeArray.getString(1) ?: "250", 
+                        truckSizeArray.getString(2) ?: "1200"
+                    )
+                } else {
+                    listOf("400", "250", "1200") // Default values
+                }
+            } else null
             
-            // Create destination point
-            val destinationPoint = Point.fromLngLat(lng, lat)
+            val truckWeight = if (mode == "truck") {
+                options?.getInt("truckWeight") ?: 5000
+            } else null
             
-            // For now, use a default origin (in a real app, you'd get the current location)
-            val originPoint = Point.fromLngLat(-77.04012393951416, 38.9111117447887) // Default origin
-            
+            Log.d("NavigationModule", "Launching NextBillion.ai navigation from: $originLat, $originLng to: $destLat, $destLng with units: $units, mode: $mode, truckSize: $truckSize, truckWeight: $truckWeight")
+
+            // Create origin and destination points
+            val originPoint = Point.fromLngLat(originLng, originLat)
+            val destinationPoint = Point.fromLngLat(destLng, destLat)
+
             // Fetch route using NextBillion.ai SDK
-            fetchRoute(originPoint, destinationPoint, activity, promise)
-            
+            fetchRoute(originPoint, destinationPoint, activity, promise, units, mode, truckSize, truckWeight)
+
         } catch (e: Exception) {
             Log.e("NavigationModule", "Error launching navigation", e)
             promise.reject("NAVIGATION_ERROR", e.message, e)
@@ -56,6 +83,8 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
         try {
             val activity = reactApplicationContext.currentActivity
             if (activity != null && activity is NavigationActivity) {
+                // Mark as not paused by user so it will send NavigationStopped event
+                activity.setPausedByUser(false)
                 activity.finish()
             }
             promise.resolve(null)
@@ -64,20 +93,82 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
         }
     }
     
-    private fun fetchRoute(origin: Point, destination: Point, activity: Activity, promise: Promise) {
-        Log.d("NavigationModule", "Fetching route from $origin to $destination")
+    @ReactMethod
+    fun resumeNavigation(promise: Promise) {
+        try {
+            val activity = reactApplicationContext.currentActivity
+            if (activity != null && activity is NavigationActivity) {
+                // If we're already in NavigationActivity, just call resume
+                activity.resumeNavigation()
+            } else {
+                // If we're in MainActivity, bring NavigationActivity to foreground
+                val context = reactApplicationContext
+                val intent = Intent(context, NavigationActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                context.startActivity(intent)
+            }
+            promise.resolve(null)
+        } catch (e: Exception) {
+            Log.e("NavigationModule", "Error resuming navigation", e)
+            promise.reject("RESUME_ERROR", e.message, e)
+        }
+    }
+    
+    private fun fetchRoute(origin: Point, destination: Point, activity: Activity, promise: Promise, units: String, mode: String, truckSize: List<String>?, truckWeight: Int?) {
+        Log.d("NavigationModule", "Fetching route from $origin to $destination with units: $units, mode: $mode, truckSize: $truckSize, truckWeight: $truckWeight")
         
-        NBNavigation.fetchRoute(origin, destination, object : Callback<DirectionsResponse> {
+        // Create route request with custom parameters including units and mode
+        val paramsBuilder = RouteRequestParams.builder()
+            .mode(if (mode == "truck") RequestParamConsts.MODE_TRUCK else RequestParamConsts.MODE_CAR)
+            .overview(RequestParamConsts.OVERVIEW_FULL)
+            .language("en")
+            .origin(origin)
+            .destination(destination)
+            .alternatives(true)
+            .option(RequestParamConsts.FLEXIBLE)
+            .departureTime((System.currentTimeMillis() / 1000).toInt())
+            .unit(if (units == "imperial") RequestParamConsts.IMPERIAL else RequestParamConsts.METRIC)
+        
+        // Add truck parameters if mode is truck
+        if (mode == "truck") {
+            truckSize?.let { paramsBuilder.truckSize(it) }
+            truckWeight?.let { paramsBuilder.truckWeight(it) }
+        }
+        
+        val params = paramsBuilder.build()
+        
+        // Log detailed route parameters for debugging
+        Log.d("NavigationModule", "=== ROUTE PARAMETERS ===")
+        Log.d("NavigationModule", "Mode: ${if (mode == "truck") RequestParamConsts.MODE_TRUCK else RequestParamConsts.MODE_CAR}")
+        Log.d("NavigationModule", "Units: ${if (units == "imperial") RequestParamConsts.IMPERIAL else RequestParamConsts.METRIC}")
+        Log.d("NavigationModule", "Origin: $origin")
+        Log.d("NavigationModule", "Destination: $destination")
+        Log.d("NavigationModule", "Overview: ${RequestParamConsts.OVERVIEW_FULL}")
+        Log.d("NavigationModule", "Language: en")
+        Log.d("NavigationModule", "Alternatives: true")
+        Log.d("NavigationModule", "Departure Time: ${(System.currentTimeMillis() / 1000).toInt()}")
+        Log.d("NavigationModule", "Alt Count: 2")
+        if (mode == "truck") {
+            Log.d("NavigationModule", "Truck Size: $truckSize")
+            Log.d("NavigationModule", "Truck Weight: $truckWeight")
+        }
+        Log.d("NavigationModule", "========================")
+
+        RouteFetcher.getRoute(params, object : Callback<DirectionsResponse> {
             override fun onResponse(call: Call<DirectionsResponse>, response: Response<DirectionsResponse>) {
                 if (response.isSuccessful && response.body() != null && !response.body()!!.routes().isEmpty()) {
                     val route = response.body()!!.routes()[0]
-                    Log.d("NavigationModule", "Route fetched successfully: ${route.distance()}m, ${route.duration()}s")
+                    Log.d("NavigationModule", "Route fetched successfully: ${route.distance()}m, ${route.duration()}s with units: $units")
                     
-                    // Launch navigation activity with the route
+                    // Launch navigation activity with the route and units
                     val intent = Intent(activity, NavigationActivity::class.java)
                     intent.putExtra("route", route)
                     intent.putExtra("destination_lat", destination.latitude())
                     intent.putExtra("destination_lng", destination.longitude())
+                    intent.putExtra("units", units)
                     
                     activity.startActivity(intent)
                     promise.resolve(null)
@@ -87,11 +178,11 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
                     promise.reject("ROUTE_ERROR", errorMessage)
                 }
             }
-            
+
             override fun onFailure(call: Call<DirectionsResponse>, t: Throwable) {
                 val errorMessage = "Route fetch failed: ${t.message}"
                 Log.e("NavigationModule", errorMessage, t)
-                promise.reject("ROUTE_ERROR", errorMessage, t)
+                promise.reject("ROUTE_ERROR", errorMessage)
             }
         })
     }

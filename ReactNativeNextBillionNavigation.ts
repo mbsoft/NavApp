@@ -15,6 +15,7 @@ export interface NavigationOptions {
 export interface NavigationModule {
   launchNavigation(destination: [number, number], options?: NavigationOptions): Promise<void>;
   dismissNavigation(): Promise<void>;
+  resumeNavigation(): Promise<void>;
 }
 
 const { ReactNativeNextBillionNavigation } = NativeModules;
@@ -38,3 +39,4 @@ export default ReactNativeNextBillionNavigation
 
 // Events are not currently supported in this implementation
 export const navigationEventEmitter = null;
+

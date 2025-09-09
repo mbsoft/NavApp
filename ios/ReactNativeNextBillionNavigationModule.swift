@@ -24,17 +24,19 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule {
     
     // MARK: - React Native Methods
     
-    @objc
+    @objc(testModule:rejecter:)
     func testModule(_ resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         resolver("iOS module is working!")
     }
     
-    @objc
-    func launchNavigation(_ destination: NSArray, options: NSDictionary?, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
+    @objc(launchNavigation:options:resolver:rejecter:)
+    func launchNavigation(_ destination: NSArray, options: NSDictionary, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         guard let destinationArray = destination as? [Double], destinationArray.count >= 2 else {
             rejecter("INVALID_DESTINATION", "Destination must be an array with at least 2 elements [lat, lng]", nil)
             return
         }
+        
+        let simulate = (options["simulate"] as? Bool) ?? false
         
         let lat = destinationArray[0]
         let lng = destinationArray[1]
@@ -43,11 +45,11 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule {
         print("iOS: Launching NextBillion.ai navigation to: \(lat), \(lng)")
         
         DispatchQueue.main.async {
-            self.startNavigation(to: destinationCoordinate, resolver: resolver, rejecter: rejecter)
+            self.startNavigation(to: destinationCoordinate, simulate: simulate, resolver: resolver, rejecter: rejecter)
         }
     }
     
-    private func startNavigation(to destination: CLLocationCoordinate2D, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
+    private func startNavigation(to destination: CLLocationCoordinate2D, simulate: Bool, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         // Get current location (for demo purposes, using a default location)
         let origin = CLLocation(latitude: 40.7128, longitude: -74.0060) // NYC
         let destinationLocation = CLLocation(latitude: destination.latitude, longitude: destination.longitude)
@@ -77,7 +79,8 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule {
             }
             
             // Create navigation service
-            let navigationService = NBNavigationService(routes: routes, routeIndex: 0, simulating: SimulationMode.inTunnels)
+            let simMode: SimulationMode = simulate ? .always : .inTunnels
+            let navigationService = NBNavigationService(routes: routes, routeIndex: 0, simulating: simMode)
             let navigationOptions = NavigationOptions(navigationService: navigationService)
             
             // Initialize the NavigationViewController
@@ -99,7 +102,7 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule {
         }
     }
     
-    @objc
+    @objc(dismissNavigation:rejecter:)
     func dismissNavigation(_ resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         print("iOS: Dismissing navigation")
         
