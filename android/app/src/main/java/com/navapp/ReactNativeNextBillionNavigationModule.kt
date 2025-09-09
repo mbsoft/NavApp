@@ -63,14 +63,32 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
                 options?.getInt("truckWeight") ?: 5000
             } else null
             
-            Log.d("NavigationModule", "Launching NextBillion.ai navigation from: $originLat, $originLng to: $destLat, $destLng with units: $units, mode: $mode, truckSize: $truckSize, truckWeight: $truckWeight")
+            // Extract route parameters
+            val routeType = options?.getString("routeType") ?: "fastest"
+            val shouldSimulate = options?.getBoolean("simulate") ?: true
+            val avoidances = if (options?.hasKey("avoidances") == true) {
+                val avoidancesArray = options.getArray("avoidances")
+                if (avoidancesArray != null) {
+                    val avoidancesList = mutableListOf<String>()
+                    for (i in 0 until avoidancesArray.size()) {
+                        avoidancesList.add(avoidancesArray.getString(i) ?: "")
+                    }
+                    avoidancesList.filter { it.isNotEmpty() }
+                } else {
+                    emptyList()
+                }
+            } else {
+                emptyList()
+            }
+            
+            Log.d("NavigationModule", "Launching NextBillion.ai navigation from: $originLat, $originLng to: $destLat, $destLng with units: $units, mode: $mode, truckSize: $truckSize, truckWeight: $truckWeight, routeType: $routeType, avoidances: $avoidances, simulate: $shouldSimulate")
 
             // Create origin and destination points
             val originPoint = Point.fromLngLat(originLng, originLat)
             val destinationPoint = Point.fromLngLat(destLng, destLat)
 
             // Fetch route using NextBillion.ai SDK
-            fetchRoute(originPoint, destinationPoint, activity, promise, units, mode, truckSize, truckWeight)
+            fetchRoute(originPoint, destinationPoint, activity, promise, units, mode, truckSize, truckWeight, routeType, avoidances, shouldSimulate)
 
         } catch (e: Exception) {
             Log.e("NavigationModule", "Error launching navigation", e)
@@ -117,20 +135,28 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
         }
     }
     
-    private fun fetchRoute(origin: Point, destination: Point, activity: Activity, promise: Promise, units: String, mode: String, truckSize: List<String>?, truckWeight: Int?) {
-        Log.d("NavigationModule", "Fetching route from $origin to $destination with units: $units, mode: $mode, truckSize: $truckSize, truckWeight: $truckWeight")
+    private fun fetchRoute(origin: Point, destination: Point, activity: Activity, promise: Promise, units: String, mode: String, truckSize: List<String>?, truckWeight: Int?, routeType: String, avoidances: List<String>, shouldSimulate: Boolean) {
+        Log.d("NavigationModule", "Fetching route from $origin to $destination with units: $units, mode: $mode, truckSize: $truckSize, truckWeight: $truckWeight, routeType: $routeType, avoidances: $avoidances, simulate: $shouldSimulate")
         
         // Create route request with custom parameters including units and mode
         val paramsBuilder = RouteRequestParams.builder()
             .mode(if (mode == "truck") RequestParamConsts.MODE_TRUCK else RequestParamConsts.MODE_CAR)
-            .overview(RequestParamConsts.OVERVIEW_FULL)
+            .overview(RequestParamConsts.OVERVIEW_FALSE)
             .language("en")
             .origin(origin)
             .destination(destination)
-            .alternatives(true)
             .option(RequestParamConsts.FLEXIBLE)
             .departureTime((System.currentTimeMillis() / 1000).toInt())
             .unit(if (units == "imperial") RequestParamConsts.IMPERIAL else RequestParamConsts.METRIC)
+        
+        // Add route type
+        val routeTypeParam = if (routeType == "shortest") RequestParamConsts.SHORTEST_TYPE else RequestParamConsts.FASTEST_TYPE
+        paramsBuilder.routeType(routeTypeParam)
+        
+        // Add avoidances if any
+        if (avoidances.isNotEmpty()) {
+            paramsBuilder.avoid(avoidances)
+        }
         
         // Add truck parameters if mode is truck
         if (mode == "truck") {
@@ -144,6 +170,8 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
         Log.d("NavigationModule", "=== ROUTE PARAMETERS ===")
         Log.d("NavigationModule", "Mode: ${if (mode == "truck") RequestParamConsts.MODE_TRUCK else RequestParamConsts.MODE_CAR}")
         Log.d("NavigationModule", "Units: ${if (units == "imperial") RequestParamConsts.IMPERIAL else RequestParamConsts.METRIC}")
+        Log.d("NavigationModule", "Route Type: $routeTypeParam")
+        Log.d("NavigationModule", "Avoidances: $avoidances")
         Log.d("NavigationModule", "Origin: $origin")
         Log.d("NavigationModule", "Destination: $destination")
         Log.d("NavigationModule", "Overview: ${RequestParamConsts.OVERVIEW_FULL}")
@@ -169,6 +197,7 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
                     intent.putExtra("destination_lat", destination.latitude())
                     intent.putExtra("destination_lng", destination.longitude())
                     intent.putExtra("units", units)
+                    intent.putExtra("should_simulate", shouldSimulate)
                     
                     activity.startActivity(intent)
                     promise.resolve(null)

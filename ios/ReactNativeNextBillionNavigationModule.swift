@@ -29,10 +29,15 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule {
         resolver("iOS module is working!")
     }
     
-    @objc(launchNavigation:options:resolver:rejecter:)
-    func launchNavigation(_ destination: NSArray, options: NSDictionary, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
+    @objc(launchNavigation:destination:options:resolver:rejecter:)
+    func launchNavigation(_ origin: NSArray, _ destination: NSArray, options: NSDictionary, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         guard let destinationArray = destination as? [Double], destinationArray.count >= 2 else {
             rejecter("INVALID_DESTINATION", "Destination must be an array with at least 2 elements [lat, lng]", nil)
+            return
+        }
+
+        guard let originArray = origin as? [Double], originArray.count >= 2 else {
+            rejecter("INVALID_ORIGIN", "Origin must be an array with at least 2 elements [lat, lng]", nil)
             return
         }
         
@@ -42,26 +47,30 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule {
         let lng = destinationArray[1]
         let destinationCoordinate = CLLocationCoordinate2D(latitude: lat, longitude: lng)
         
+        let olat = originArray[0]
+        let olng = originArray[1]
+        let originCoordinate = CLLocationCoordinate2D(latitude: olat, longitude: olng)
+
         print("iOS: Launching NextBillion.ai navigation to: \(lat), \(lng)")
         
         DispatchQueue.main.async {
-            self.startNavigation(to: destinationCoordinate, simulate: simulate, resolver: resolver, rejecter: rejecter)
+            self.startNavigation(from: originCoordinate,to: destinationCoordinate, simulate: simulate, resolver: resolver, rejecter: rejecter)
         }
     }
     
-    private func startNavigation(to destination: CLLocationCoordinate2D, simulate: Bool, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
+    private func startNavigation(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, simulate: Bool, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         // Get current location (for demo purposes, using a default location)
-        let origin = CLLocation(latitude: 40.7128, longitude: -74.0060) // NYC
+        let originLocation = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
         let destinationLocation = CLLocation(latitude: destination.latitude, longitude: destination.longitude)
         
         // Create route options
-        let options = NavigationRouteOptions(origin: origin, destination: destinationLocation)
+        let options = NavigationRouteOptions(origin: originLocation, destination: destinationLocation)
         options.profileIdentifier = NBNavigationMode.car
         options.includesAlternativeRoutes = true
         options.distanceMeasurementSystem = .imperial
         options.departureTime = Int(Date().timeIntervalSince1970)
         options.locale = Locale.autoupdatingCurrent
-        options.mapOption = NBMapOption.none
+        options.mapOption = .none
         options.shapeFormat = .polyline6
         
         // Fetch route

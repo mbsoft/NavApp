@@ -53,12 +53,19 @@ function AppContent() {
   // Navigation state
   const [isNavigationRunning, setIsNavigationRunning] = useState(false);
   const [navigationMode, setNavigationMode] = useState<'car' | 'truck'>('car');
+  const [simulateRoute, setSimulateRoute] = useState(true);
   
   // Truck parameters
   const [truckHeight, setTruckHeight] = useState('400'); // Default 4m in cm
   const [truckWidth, setTruckWidth] = useState('250');   // Default 2.5m in cm
   const [truckLength, setTruckLength] = useState('1200'); // Default 12m in cm
   const [truckWeight, setTruckWeight] = useState('5000'); // Default 5000kg
+  const [isTruckParamsExpanded, setIsTruckParamsExpanded] = useState(false);
+  
+  // Route parameters
+  const [isRouteParamsExpanded, setIsRouteParamsExpanded] = useState(false);
+  const [routeAvoidances, setRouteAvoidances] = useState<string[]>([]);
+  const [routeType, setRouteType] = useState<'shortest' | 'fastest'>('fastest');
 
   // Default fallback location - moved outside to avoid dependency issues
   const defaultLocation = React.useMemo(() => ({ lat: 38.9111117447887, lng: -77.04012393951416 }), []);
@@ -319,6 +326,7 @@ function AppContent() {
   const handlePlaceSelect = (place: PlaceResult) => {
     setSelectedDestination(place);
     setSearchQuery(''); // Clear the search input
+    setSearchResults([]); // Clear the search results
     setShowResults(false);
   };
 
@@ -342,9 +350,11 @@ function AppContent() {
 
       const options = {
         mode: navigationMode,
-        simulate: true,
+        simulate: simulateRoute,
         units: 'imperial' as const,
         origin: origin,
+        routeType: routeType,
+        avoidances: routeAvoidances,
         ...(navigationMode === 'truck' && {
           truckSize: [truckHeight, truckWidth, truckLength],
           truckWeight: parseInt(truckWeight, 10),
@@ -372,7 +382,7 @@ function AppContent() {
             placeholder="Search for destination..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            onFocus={() => setShowResults(searchResults.length > 0)}
+            onFocus={() => setShowResults(searchQuery.length >= 3 && searchResults.length > 0)}
           />
           {isSearching && (
             <ActivityIndicator style={styles.searchLoader} size="small" color="#007AFF" />
@@ -396,6 +406,36 @@ function AppContent() {
               )}
               style={styles.resultsList}
             />
+          </View>
+        )}
+
+        {/* Location Status Display */}
+        <View style={styles.locationStatusContainer}>
+          <Text style={styles.locationStatusLabel}>Origin:</Text>
+          {isLocationLoading ? (
+            <View style={styles.locationLoadingContainer}>
+              <ActivityIndicator size="small" color="#007AFF" />
+              <Text style={styles.locationLoadingText}>Getting location...</Text>
+            </View>
+          ) : locationPermissionGranted ? (
+            <View style={styles.locationSuccessContainer}>
+              <Text style={styles.locationSuccessText}>✓ {currentAddress || 'Location acquired'}</Text>
+            </View>
+          ) : (
+            <View style={styles.locationErrorContainer}>
+              <Text style={styles.locationErrorText}>Location permission denied</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={requestLocationPermission}>
+                <Text style={styles.retryButtonText}>Try Again</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Selected Destination Display */}
+        {selectedDestination && (
+          <View style={styles.selectedOriginContainer}>
+            <Text style={styles.selectedOriginLabel}>Destination:</Text>
+            <Text style={styles.selectedOriginText}>{selectedDestination.title}</Text>
           </View>
         )}
 
@@ -432,70 +472,180 @@ function AppContent() {
               </Text>
             </TouchableOpacity>
           </View>
+          
+          {/* Simulate Route Checkbox */}
+          <View style={styles.simulateContainer}>
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() => setSimulateRoute(!simulateRoute)}
+            >
+              <View style={[
+                styles.checkbox,
+                simulateRoute && styles.checkboxSelected
+              ]}>
+                {simulateRoute && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.checkboxLabel}>Simulate Route</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Truck Parameters - Only show when truck mode is selected */}
         {navigationMode === 'truck' && (
           <View style={styles.truckParamsContainer}>
-            <Text style={styles.truckParamsLabel}>Truck Parameters:</Text>
+            <TouchableOpacity 
+              style={styles.truckParamsHeader}
+              onPress={() => setIsTruckParamsExpanded(!isTruckParamsExpanded)}
+            >
+              <Text style={styles.truckParamsLabel}>Truck Parameters:</Text>
+              <Text style={styles.truckParamsToggle}>
+                {isTruckParamsExpanded ? '▼' : '▶'}
+              </Text>
+            </TouchableOpacity>
             
-            {/* Dimensions Row */}
-            <View style={styles.truckDimensionsRow}>
-              <View style={styles.truckInputContainer}>
-                <Text style={styles.truckInputLabel}>Height (cm)</Text>
-                <TextInput
-                  style={styles.truckInput}
-                  value={truckHeight}
-                  onChangeText={setTruckHeight}
-                  keyboardType="numeric"
-                  placeholder="400"
-                  maxLength={4}
-                />
-              </View>
-              <View style={styles.truckInputContainer}>
-                <Text style={styles.truckInputLabel}>Width (cm)</Text>
-                <TextInput
-                  style={styles.truckInput}
-                  value={truckWidth}
-                  onChangeText={setTruckWidth}
-                  keyboardType="numeric"
-                  placeholder="250"
-                  maxLength={4}
-                />
-              </View>
-              <View style={styles.truckInputContainer}>
-                <Text style={styles.truckInputLabel}>Length (cm)</Text>
-                <TextInput
-                  style={styles.truckInput}
-                  value={truckLength}
-                  onChangeText={setTruckLength}
-                  keyboardType="numeric"
-                  placeholder="1200"
-                  maxLength={4}
-                />
-              </View>
-            </View>
-            
-            {/* Weight Row */}
-            <View style={styles.truckWeightRow}>
-              <View style={styles.truckInputContainer}>
-                <Text style={styles.truckInputLabel}>Weight (kg)</Text>
-                <TextInput
-                  style={styles.truckInput}
-                  value={truckWeight}
-                  onChangeText={setTruckWeight}
-                  keyboardType="numeric"
-                  placeholder="5000"
-                  maxLength={6}
-                />
-              </View>
-            </View>
-            
-            <Text style={styles.truckParamsNote}>
-              Max: Height 1000cm, Width 5000cm, Length 5000cm, Weight 100000kg
-            </Text>
+            {isTruckParamsExpanded && (
+              <>
+                {/* Dimensions Row */}
+                <View style={styles.truckDimensionsRow}>
+                  <View style={styles.truckInputContainer}>
+                    <Text style={styles.truckInputLabel}>Height (cm)</Text>
+                    <TextInput
+                      style={styles.truckInput}
+                      value={truckHeight}
+                      onChangeText={setTruckHeight}
+                      keyboardType="numeric"
+                      placeholder="400"
+                      maxLength={4}
+                    />
+                  </View>
+                  <View style={styles.truckInputContainer}>
+                    <Text style={styles.truckInputLabel}>Width (cm)</Text>
+                    <TextInput
+                      style={styles.truckInput}
+                      value={truckWidth}
+                      onChangeText={setTruckWidth}
+                      keyboardType="numeric"
+                      placeholder="250"
+                      maxLength={4}
+                    />
+                  </View>
+                  <View style={styles.truckInputContainer}>
+                    <Text style={styles.truckInputLabel}>Length (cm)</Text>
+                    <TextInput
+                      style={styles.truckInput}
+                      value={truckLength}
+                      onChangeText={setTruckLength}
+                      keyboardType="numeric"
+                      placeholder="1200"
+                      maxLength={4}
+                    />
+                  </View>
+                </View>
+                
+                {/* Weight Row */}
+                <View style={styles.truckWeightRow}>
+                  <View style={styles.truckInputContainer}>
+                    <Text style={styles.truckInputLabel}>Weight (kg)</Text>
+                    <TextInput
+                      style={styles.truckInput}
+                      value={truckWeight}
+                      onChangeText={setTruckWeight}
+                      keyboardType="numeric"
+                      placeholder="5000"
+                      maxLength={6}
+                    />
+                  </View>
+                </View>
+                
+                <Text style={styles.truckParamsNote}>
+                  Max: Height 1000cm, Width 5000cm, Length 5000cm, Weight 100000kg
+                </Text>
+              </>
+            )}
           </View>
         )}
+
+        {/* Route Parameters - Always visible */}
+        <View style={styles.routeParamsContainer}>
+          <TouchableOpacity 
+            style={styles.routeParamsHeader}
+            onPress={() => setIsRouteParamsExpanded(!isRouteParamsExpanded)}
+          >
+            <Text style={styles.routeParamsLabel}>Route Parameters:</Text>
+            <Text style={styles.routeParamsToggle}>
+              {isRouteParamsExpanded ? '▼' : '▶'}
+            </Text>
+          </TouchableOpacity>
+          
+          {isRouteParamsExpanded && (
+            <>
+              {/* Route Type Selector */}
+              <View style={styles.routeTypeContainer}>
+                <Text style={styles.routeTypeLabel}>Route Type:</Text>
+                <View style={styles.routeTypeButtons}>
+                  <TouchableOpacity
+                    style={[
+                      styles.routeTypeButton,
+                      routeType === 'fastest' && styles.routeTypeButtonSelected
+                    ]}
+                    onPress={() => setRouteType('fastest')}
+                  >
+                    <Text style={[
+                      styles.routeTypeButtonText,
+                      routeType === 'fastest' && styles.routeTypeButtonTextSelected
+                    ]}>
+                      Fastest
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.routeTypeButton,
+                      routeType === 'shortest' && styles.routeTypeButtonSelected
+                    ]}
+                    onPress={() => setRouteType('shortest')}
+                  >
+                    <Text style={[
+                      styles.routeTypeButtonText,
+                      routeType === 'shortest' && styles.routeTypeButtonTextSelected
+                    ]}>
+                      Shortest
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {/* Route Avoidances */}
+              <View style={styles.avoidancesContainer}>
+                <Text style={styles.avoidancesLabel}>Avoid:</Text>
+                <View style={styles.avoidancesGrid}>
+                  {['highway', 'uturn', 'toll', 'ferry', 'left_turn', 'right_turn'].map((avoidance) => (
+                    <TouchableOpacity
+                      key={avoidance}
+                      style={[
+                        styles.avoidanceButton,
+                        routeAvoidances.includes(avoidance) && styles.avoidanceButtonSelected
+                      ]}
+                      onPress={() => {
+                        if (routeAvoidances.includes(avoidance)) {
+                          setRouteAvoidances(routeAvoidances.filter(item => item !== avoidance));
+                        } else {
+                          setRouteAvoidances([...routeAvoidances, avoidance]);
+                        }
+                      }}
+                    >
+                      <Text style={[
+                        styles.avoidanceButtonText,
+                        routeAvoidances.includes(avoidance) && styles.avoidanceButtonTextSelected
+                      ]}>
+                        {avoidance.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </>
+          )}
+        </View>
 
         {/* Location Status Display */}
         <View style={styles.locationStatusContainer}>
@@ -684,6 +834,39 @@ const styles = StyleSheet.create({
   modeButtonTextSelected: {
     color: 'white',
   },
+  simulateContainer: {
+    marginTop: 12,
+    alignItems: 'flex-start',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    borderRadius: 4,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+  },
+  checkboxSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  checkmark: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
   truckParamsContainer: {
     backgroundColor: '#f0f8ff',
     padding: 12,
@@ -693,11 +876,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#007AFF',
   },
+  truckParamsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   truckParamsLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: '#007AFF',
-    marginBottom: 10,
+  },
+  truckParamsToggle: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: 'bold',
   },
   truckDimensionsRow: {
     flexDirection: 'row',
@@ -733,6 +926,100 @@ const styles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
     textAlign: 'center',
+  },
+  routeParamsContainer: {
+    backgroundColor: '#f0f8ff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  routeParamsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  routeParamsLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  routeParamsToggle: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: 'bold',
+  },
+  routeTypeContainer: {
+    marginBottom: 12,
+  },
+  routeTypeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginBottom: 8,
+  },
+  routeTypeButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  routeTypeButton: {
+    flex: 1,
+    backgroundColor: 'white',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+  },
+  routeTypeButtonSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  routeTypeButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+  },
+  routeTypeButtonTextSelected: {
+    color: 'white',
+  },
+  avoidancesContainer: {
+    marginBottom: 8,
+  },
+  avoidancesLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginBottom: 8,
+  },
+  avoidancesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  avoidanceButton: {
+    backgroundColor: 'white',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  avoidanceButtonSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  avoidanceButtonText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#666',
+  },
+  avoidanceButtonTextSelected: {
+    color: 'white',
   },
   locationStatusContainer: {
     backgroundColor: '#f8f9fa',

@@ -38,6 +38,7 @@ class NavigationActivity : AppCompatActivity(), OnNavigationReadyCallback, Navig
     private var route: DirectionsRoute? = null
     private var isPausedByUser = false
     private var units: String = "metric"
+    private var shouldSimulate: Boolean = true
     
     companion object {
         private var isPausedByUserStatic = false
@@ -109,7 +110,8 @@ class NavigationActivity : AppCompatActivity(), OnNavigationReadyCallback, Navig
             destinationLat = intent.getDoubleExtra("destination_lat", 0.0)
             destinationLng = intent.getDoubleExtra("destination_lng", 0.0)
             units = intent.getStringExtra("units") ?: "metric"
-            Log.d("NavigationActivity", "Destination: $destinationLat, $destinationLng, Units: $units")
+            shouldSimulate = intent.getBooleanExtra("should_simulate", true)
+            Log.d("NavigationActivity", "Destination: $destinationLat, $destinationLng, Units: $units, Simulate: $shouldSimulate")
             
             // Get route if passed
             route = intent.getSerializableExtra("route") as? DirectionsRoute
@@ -208,7 +210,7 @@ class NavigationActivity : AppCompatActivity(), OnNavigationReadyCallback, Navig
             .navigationListener(this)
             .progressChangeListener(this)
             .routeListener(this)
-            .shouldSimulateRoute(true)
+            .shouldSimulateRoute(shouldSimulate)
             .showSpeedometer(true)
             .locationLayerRenderMode(RenderMode.GPS)
             .navConfig(navConfig)
@@ -326,11 +328,11 @@ class NavigationActivity : AppCompatActivity(), OnNavigationReadyCallback, Navig
         Log.d("NavigationActivity", "onPause called, isPausedByUser: $isPausedByUser, isPausedByUserStatic: $isPausedByUserStatic")
         // Always pause navigation view - we'll resume it when needed
         navigationView.onPause()
-        if (isPausedByUserStatic) {
-            Log.d("NavigationActivity", "Navigation paused by user - will resume when brought to foreground")
-        } else {
-            Log.d("NavigationActivity", "Navigation paused normally")
-        }
+        //if (isPausedByUserStatic) {
+        //    Log.d("NavigationActivity", "Navigation paused by user - will resume when brought to foreground")
+        //} else {
+        //    Log.d("NavigationActivity", "Navigation paused normally")
+       // }
     }
     
     override fun onStop() {

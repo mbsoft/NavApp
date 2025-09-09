@@ -131,7 +131,7 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule {
     }
     
     @objc
-    func launchNavigation(_ origin: NSArray, destination: NSArray, options: NSDictionary?, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
+    func launchNavigation(destination: NSArray, options: NSDictionary?, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         print("🚀 NAVIGATION: launchNavigation called with origin: \(origin), destination: \(destination)")
         
         guard let originArray = origin as? [Double], originArray.count >= 2 else {
