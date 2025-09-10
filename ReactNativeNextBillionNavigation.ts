@@ -1,4 +1,4 @@
-import { NativeModules, Platform } from 'react-native';
+import { NativeModules, Platform, NativeEventEmitter } from 'react-native';
 
 export interface NavigationOptions {
   mode?: 'car' | 'truck';
@@ -12,10 +12,31 @@ export interface NavigationOptions {
   units?: 'imperial' | 'metric';
 }
 
+export interface ManeuverData {
+  instruction: string;
+  distance: number;
+  duration: number;
+  maneuverType: string;
+  maneuverDirection: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    altitude: number;
+    course: number;
+    speed: number;
+  };
+  routeProgress: {
+    distanceRemaining: number;
+    durationRemaining: number;
+    fractionTraveled: number;
+  };
+}
+
 export interface NavigationModule {
   launchNavigation(destination: [number, number], options?: NavigationOptions): Promise<void>;
   dismissNavigation(): Promise<void>;
   resumeNavigation(): Promise<void>;
+  hideNavigation(): Promise<void>;
 }
 
 const { ReactNativeNextBillionNavigation } = NativeModules;
@@ -37,6 +58,15 @@ export default ReactNativeNextBillionNavigation
       }
     );
 
-// Events are not currently supported in this implementation
-export const navigationEventEmitter = null;
+// Event emitter for navigation events
+export const navigationEventEmitter = ReactNativeNextBillionNavigation
+  ? new NativeEventEmitter(ReactNativeNextBillionNavigation)
+  : null;
+
+// Event types
+export const NavigationEvents = {
+  NavigationHidden: 'NavigationHidden',
+  NavigationStopped: 'NavigationStopped',
+  NavigationManeuver: 'NavigationManeuver',
+} as const;
 

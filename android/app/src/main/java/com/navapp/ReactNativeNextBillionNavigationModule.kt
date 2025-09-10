@@ -140,7 +140,12 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
         
         // Create route request with custom parameters including units and mode
         val paramsBuilder = RouteRequestParams.builder()
-            .mode(if (mode == "truck") RequestParamConsts.MODE_TRUCK else RequestParamConsts.MODE_CAR)
+            .mode(when (mode) {
+                "truck" -> RequestParamConsts.MODE_TRUCK
+                "bike" -> RequestParamConsts.MODE_CAR // Map bike to car mode as fallback
+                "pedestrian" -> RequestParamConsts.MODE_CAR // Map pedestrian to car mode as fallback
+                else -> RequestParamConsts.MODE_CAR
+            })
             .overview(RequestParamConsts.OVERVIEW_FALSE)
             .language("en")
             .origin(origin)
@@ -168,7 +173,16 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
         
         // Log detailed route parameters for debugging
         Log.d("NavigationModule", "=== ROUTE PARAMETERS ===")
-        Log.d("NavigationModule", "Mode: ${if (mode == "truck") RequestParamConsts.MODE_TRUCK else RequestParamConsts.MODE_CAR}")
+        val actualMode = when (mode) {
+            "truck" -> RequestParamConsts.MODE_TRUCK
+            "bike" -> RequestParamConsts.MODE_CAR
+            "pedestrian" -> {
+                Log.w("NavigationModule", "Pedestrian mode not supported in Android SDK, using car mode as fallback")
+                RequestParamConsts.MODE_CAR
+            }
+            else -> RequestParamConsts.MODE_CAR
+        }
+        Log.d("NavigationModule", "Mode: $actualMode (requested: $mode)")
         Log.d("NavigationModule", "Units: ${if (units == "imperial") RequestParamConsts.IMPERIAL else RequestParamConsts.METRIC}")
         Log.d("NavigationModule", "Route Type: $routeTypeParam")
         Log.d("NavigationModule", "Avoidances: $avoidances")

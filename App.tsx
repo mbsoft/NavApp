@@ -11,7 +11,7 @@ import {
 } from 'react-native-safe-area-context';
 import React, { useState, useEffect, useCallback } from 'react';
 import Geolocation from '@react-native-community/geolocation';
-import ReactNativeNextBillionNavigation from './ReactNativeNextBillionNavigation';
+import ReactNativeNextBillionNavigation, { navigationEventEmitter, NavigationEvents, ManeuverData } from './ReactNativeNextBillionNavigation';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -52,8 +52,12 @@ function AppContent() {
   
   // Navigation state
   const [isNavigationRunning, setIsNavigationRunning] = useState(false);
-  const [navigationMode, setNavigationMode] = useState<'car' | 'truck'>('car');
+  const [isNavigationVisible, setIsNavigationVisible] = useState(false);
+  const [navigationMode, setNavigationMode] = useState<'car' | 'truck' | 'bike' | 'pedestrian'>('car');
   const [simulateRoute, setSimulateRoute] = useState(true);
+  
+  // Maneuver data for background navigation
+  const [currentManeuver, setCurrentManeuver] = useState<ManeuverData | null>(null);
   
   // Truck parameters
   const [truckHeight, setTruckHeight] = useState('400'); // Default 4m in cm
@@ -69,6 +73,68 @@ function AppContent() {
 
   // Default fallback location - moved outside to avoid dependency issues
   const defaultLocation = React.useMemo(() => ({ lat: 38.9111117447887, lng: -77.04012393951416 }), []);
+
+  // Format distance in imperial units (miles/yards)
+  const formatDistanceImperial = (distanceInMiles: number): string => {
+    if (distanceInMiles < 1) {
+      const yards = Math.round(distanceInMiles * 1760); // Convert miles to yards
+      return `${yards} yards`;
+    } else if (distanceInMiles < 10) {
+      return `${distanceInMiles.toFixed(1)} miles`;
+    } else {
+      return `${Math.round(distanceInMiles)} miles`;
+    }
+  };
+
+  // Generate maneuver icon based on type and direction
+  const getManeuverIcon = (maneuverType: string, maneuverDirection: string): string => {
+    // Handle undefined/null values and ensure they're strings
+    const direction = String(maneuverDirection || '').toLowerCase();
+    const type = String(maneuverType || '').toLowerCase();
+    
+    // Debug logging
+    console.log('Maneuver Icon Debug:', { maneuverType, maneuverDirection, type, direction });
+    
+    // Handle different maneuver types and directions
+    if (type.includes('turn') || type.includes('turn_')) {
+      switch (direction) {
+        case 'right':
+        case 'right_':
+          return '↗️'; // Right turn
+        case 'left':
+        case 'left_':
+          return '↖️'; // Left turn
+        case 'slight_right':
+          return '↗️'; // Slight right
+        case 'slight_left':
+          return '↖️'; // Slight left
+        case 'sharp_right':
+          return '↗️'; // Sharp right
+        case 'sharp_left':
+          return '↖️'; // Sharp left
+        default:
+          return '↗️'; // Default turn
+      }
+    } else if (type.includes('straight') || type.includes('continue')) {
+      return '↑'; // Straight/Continue
+    } else if (type.includes('uturn') || type.includes('uturn_')) {
+      return '↩️'; // U-turn
+    } else if (type.includes('merge') || type.includes('merge_')) {
+      return '↗️'; // Merge
+    } else if (type.includes('ramp') || type.includes('ramp_')) {
+      return '↗️'; // Ramp
+    } else if (type.includes('fork') || type.includes('fork_')) {
+      return '↗️'; // Fork
+    } else if (type.includes('roundabout') || type.includes('roundabout_')) {
+      return '↻'; // Roundabout
+    } else if (type.includes('arrive') || type.includes('arrive_')) {
+      return '🏁'; // Arrive
+    } else if (type.includes('depart') || type.includes('depart_')) {
+      return '🚀'; // Depart
+    } else {
+      return '↑'; // Default straight
+    }
+  };
 
   // Reverse geocoding function to get address from coordinates
   const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string | null> => {
@@ -196,16 +262,17 @@ function AppContent() {
     }
   }, [currentLocation, isLocationLoading, defaultLocation.lat, defaultLocation.lng, reverseGeocode]);
 
-  // Dismiss navigation function
+  // Dismiss navigation function - stops navigation completely
   const dismissNavigation = useCallback(async () => {
     try {
       if (ReactNativeNextBillionNavigation && isNavigationRunning) {
         await (ReactNativeNextBillionNavigation as any).dismissNavigation();
         setIsNavigationRunning(false);
-        console.log('Navigation dismissed successfully');
+        setIsNavigationVisible(false);
+        console.log('Navigation stopped successfully');
       }
     } catch (error) {
-      console.error('Error dismissing navigation:', error);
+      console.error('Error stopping navigation:', error);
       // Still set state to false even if dismiss fails
       setIsNavigationRunning(false);
     }
@@ -225,6 +292,7 @@ function AppContent() {
       }
 
       await (ReactNativeNextBillionNavigation as any).resumeNavigation();
+      setIsNavigationVisible(true);
       console.log('Navigation resumed successfully');
     } catch (error) {
       console.error('Error resuming navigation:', error);
@@ -265,12 +333,26 @@ function AppContent() {
     const navigationStoppedListener = eventEmitter.addListener('NavigationStopped', () => {
       console.log('Navigation stopped event received');
       setIsNavigationRunning(false);
+      setIsNavigationVisible(false);
+    });
+    
+    const navigationHiddenListener = eventEmitter.addListener('NavigationHidden', () => {
+      console.log('Navigation hidden event received - keeping navigation running but hiding view');
+      // Keep isNavigationRunning as true, but set isNavigationVisible to false
+      setIsNavigationVisible(false);
+    });
+    
+    const navigationManeuverListener = eventEmitter.addListener('NavigationManeuver', (maneuverData: ManeuverData) => {
+      console.log('Navigation maneuver event received:', maneuverData);
+      setCurrentManeuver(maneuverData);
     });
     
     return () => {
       navigationStartedListener.remove();
       navigationPausedListener.remove();
       navigationStoppedListener.remove();
+      navigationHiddenListener.remove();
+      navigationManeuverListener.remove();
     };
   }, []);
 
@@ -331,6 +413,23 @@ function AppContent() {
   };
 
   const handleNavigationPress = async () => {
+    // Show warning for pedestrian mode
+    if (navigationMode === 'pedestrian') {
+      Alert.alert(
+        'Pedestrian Mode Notice',
+        'Pedestrian routing is not fully supported by the NextBillion.ai SDK. The route will use bike/car routing as an approximation. For true pedestrian navigation, consider using a dedicated walking navigation app.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Continue', onPress: () => startNavigation() }
+        ]
+      );
+      return;
+    }
+
+    startNavigation();
+  };
+
+  const startNavigation = async () => {
     try {
       console.log('ReactNativeNextBillionNavigation module:', ReactNativeNextBillionNavigation);
       
@@ -362,6 +461,8 @@ function AppContent() {
       };
 
       await (ReactNativeNextBillionNavigation as any).launchNavigation(origin, destination, options);
+      setIsNavigationRunning(true);
+      setIsNavigationVisible(true);
       console.log('Navigation launched successfully');
     } catch (error) {
       Alert.alert('Navigation Error', `Failed to launch navigation: ${error}`);
@@ -451,10 +552,10 @@ function AppContent() {
               onPress={() => setNavigationMode('car')}
             >
               <Text style={[
-                styles.modeButtonText,
-                navigationMode === 'car' && styles.modeButtonTextSelected
+                styles.modeButtonIcon,
+                navigationMode === 'car' && styles.modeButtonIconSelected
               ]}>
-                🚗 Car
+                🚗
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -465,10 +566,38 @@ function AppContent() {
               onPress={() => setNavigationMode('truck')}
             >
               <Text style={[
-                styles.modeButtonText,
-                navigationMode === 'truck' && styles.modeButtonTextSelected
+                styles.modeButtonIcon,
+                navigationMode === 'truck' && styles.modeButtonIconSelected
               ]}>
-                🚛 Truck
+                🚚
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.modeButton,
+                navigationMode === 'bike' && styles.modeButtonSelected
+              ]}
+              onPress={() => setNavigationMode('bike')}
+            >
+              <Text style={[
+                styles.modeButtonIcon,
+                navigationMode === 'bike' && styles.modeButtonIconSelected
+              ]}>
+                🚴
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.modeButton,
+                navigationMode === 'pedestrian' && styles.modeButtonSelected
+              ]}
+              onPress={() => setNavigationMode('pedestrian')}
+            >
+              <Text style={[
+                styles.modeButtonIcon,
+                navigationMode === 'pedestrian' && styles.modeButtonIconSelected
+              ]}>
+                🚶
               </Text>
             </TouchableOpacity>
           </View>
@@ -650,14 +779,59 @@ function AppContent() {
         
         {isNavigationRunning ? (
           <View style={styles.navigationControlsContainer}>
+            {/* Maneuver Instructions Display */}
+            {currentManeuver && (
+              <View style={styles.maneuverContainer}>
+                <View style={styles.maneuverInstructionContainer}>
+                  <Text style={styles.maneuverIcon}>
+                    {getManeuverIcon(currentManeuver.maneuverType, currentManeuver.maneuverDirection)}
+                  </Text>
+                  <Text style={styles.maneuverInstruction}>{currentManeuver.instruction}</Text>
+                </View>
+                <View style={styles.maneuverDetails}>
+                  <Text style={styles.maneuverDetail}>
+                    Distance: {formatDistanceImperial(currentManeuver.distance)}
+                  </Text>
+                  <Text style={styles.maneuverDetail}>
+                    Time: {Math.round(currentManeuver.duration)}s
+                  </Text>
+                </View>
+                <View style={styles.maneuverDetails}>
+                  <Text style={styles.maneuverDetail}>
+                    Remaining: {formatDistanceImperial(currentManeuver.routeProgress.distanceRemaining * 0.000621371)}
+                  </Text>
+                  <Text style={styles.maneuverDetail}>
+                    ETA: {new Date(Date.now() + currentManeuver.routeProgress.durationRemaining * 1000).toLocaleTimeString('en-US', { 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      hour12: false 
+                    })}
+                  </Text>
+                </View>
+                <View style={styles.routeProgressContainer}>
+                  <Text style={styles.routeProgressText}>
+                    Route Progress: {Math.round(currentManeuver.routeProgress.fractionTraveled * 100)}%
+                  </Text>
+                  <Text style={styles.routeProgressText}>
+                    Remaining: {Math.round(currentManeuver.routeProgress.distanceRemaining)}m
+                  </Text>
+                </View>
+              </View>
+            )}
+            
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.showButton} onPress={showNavigation}>
-                <Text style={styles.buttonText}>Show Navigation</Text>
-              </TouchableOpacity>
+              {!isNavigationVisible && (
+                <TouchableOpacity style={styles.showButton} onPress={showNavigation}>
+                  <Text style={styles.buttonText}>Show Navigation</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity style={styles.dismissButton} onPress={dismissNavigation}>
                 <Text style={styles.buttonText}>Stop Navigation</Text>
               </TouchableOpacity>
             </View>
+            <Text style={styles.navigationStatusText}>
+              Navigation is running in the background. {!isNavigationVisible && 'Tap "Show Navigation" to return to the navigation screen.'}
+            </Text>
           </View>
         ) : (
           <TouchableOpacity style={styles.navigationButton} onPress={handleNavigationPress}>
@@ -772,12 +946,14 @@ const styles = StyleSheet.create({
   modeButton: {
     flex: 1,
     backgroundColor: 'white',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: 6,
     borderWidth: 2,
     borderColor: '#e0e0e0',
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
   },
   modeButtonSelected: {
     backgroundColor: '#007AFF',
@@ -789,6 +965,13 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   modeButtonTextSelected: {
+    color: 'white',
+  },
+  modeButtonIcon: {
+    fontSize: 24,
+    color: '#666',
+  },
+  modeButtonIconSelected: {
     color: 'white',
   },
   simulateContainer: {
@@ -1042,6 +1225,60 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 12,
   },
+  navigationStatusText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 12,
+    fontStyle: 'italic',
+  },
+  maneuverContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    width: '100%',
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+  },
+  maneuverInstructionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  maneuverIcon: {
+    fontSize: 24,
+    marginRight: 8,
+  },
+  maneuverInstruction: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+    textAlign: 'left',
+  },
+  maneuverDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  maneuverDetail: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  routeProgressContainer: {
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    paddingTop: 8,
+  },
+  routeProgressText: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
   navigationButton: {
     backgroundColor: '#007AFF',
     paddingHorizontal: 24,
@@ -1070,6 +1307,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dismissButton: {
     backgroundColor: '#FF3B30',
@@ -1085,6 +1324,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
     color: 'white',
