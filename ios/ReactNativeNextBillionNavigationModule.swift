@@ -7,6 +7,7 @@ import NbmapNavigation
 import ActivityKit
 import BackgroundTasks
 
+
 // Live Activity Attributes
 struct ETAAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
@@ -18,7 +19,6 @@ struct ETAAttributes: ActivityAttributes {
     }
     
     var destination: String
-    var routeType: String
 }
 
 // Live Activity Manager
@@ -30,7 +30,7 @@ class LiveActivityManager: ObservableObject {
         return currentActivity != nil
     }
     
-    func startLiveActivity(destination: String, routeType: String, eta: String, instruction: String, remainingDistance: String, progressPercentage: Int = 0) {
+    func startLiveActivity(destination: String, eta: String, instruction: String, remainingDistance: String, progressPercentage: Int = 0) {
         print("🔴 LiveActivityManager: ===== STARTING LIVE ACTIVITY =====")
         print("🔴 LiveActivityManager: Attempting to start Live Activity")
         print("🔴 LiveActivityManager: Destination: \(destination), ETA: \(eta)")
@@ -63,7 +63,7 @@ class LiveActivityManager: ObservableObject {
         
         stopLiveActivity()
         
-        let attributes = ETAAttributes(destination: destination, routeType: routeType)
+        let attributes = ETAAttributes(destination: destination)
         let contentState = ETAAttributes.ContentState(
             eta: eta,
             instruction: instruction,
@@ -127,7 +127,7 @@ class LiveActivityManager: ObservableObject {
 }
 
 @objc(ReactNativeNextBillionNavigation)
-class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationViewControllerDelegate {
+class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationViewControllerDelegate, NavigationServiceDelegate {
     
     private var navigationViewController: NavigationViewController?
     private var navigationService: NBNavigationService?
@@ -146,6 +146,7 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
     override init() {
         super.init()
         setupAppLifecycleMonitoring()
+        setupCustomLocalization()
     }
     
     deinit {
@@ -232,23 +233,27 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
         let distanceInMeters = Int(stepDistance)
         
         // Try to get the actual instruction from the RouteStep
-        let stepInstructions = currentStep.instructions
-        if !stepInstructions.isEmpty {
-            instruction = stepInstructions
-        } else {
-            // Fallback to distance-based instruction if no step instruction available
-            let imperialDistance = formatDistanceImperial(distanceInMeters: distanceInMeters)
-            
-            if distanceInMeters < 50 {
-                instruction = "In \(imperialDistance), continue straight"
-            } else if distanceInMeters < 200 {
-                instruction = "Continue straight for \(imperialDistance)"
-            } else if distanceInMeters < 500 {
-                instruction = "Continue on current route for \(imperialDistance)"
-            } else {
-                instruction = "Continue on current route"
-            }
-        }
+      if let firstInstruction = currentStep.instructionsDisplayedAlongStep?.first,
+         let primaryInstruction = firstInstruction.primaryInstruction,
+         let stepInstruction = primaryInstruction.instruction,
+         !stepInstruction.isEmpty {
+          
+          instruction = stepInstruction
+          
+      } else {
+          // Fallback to distance-based instruction if no step instruction available
+          let imperialDistance = formatDistanceImperial(distanceInMeters: distanceInMeters)
+          
+          if distanceInMeters < 50 {
+              instruction = "In \(imperialDistance), continue straight"
+          } else if distanceInMeters < 200 {
+              instruction = "Continue straight for \(imperialDistance)"
+          } else if distanceInMeters < 500 {
+              instruction = "Continue on current route for \(imperialDistance)"
+          } else {
+              instruction = "Continue on current route"
+          }
+      }
         
         // Convert distance to imperial for display
         let distanceInMiles = Double(stepDistance) * 0.000621371
@@ -277,7 +282,6 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
                     print("🔴 NavigationModule: Starting new Live Activity")
                     manager.startLiveActivity(
                         destination: "Destination",
-                        routeType: "car", // Default route type
                         eta: etaString,
                         instruction: instruction,
                         remainingDistance: remainingDistanceString,
@@ -350,7 +354,6 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
         let simulate = (options["simulate"] as? Bool) ?? false
         let mode = (options["mode"] as? String) ?? "car"
         let units = (options["units"] as? String) ?? "imperial"
-        let routeType = (options["routeType"] as? String) ?? "fastest"
         let avoidances = (options["avoidances"] as? [String]) ?? []
         let truckSize = (options["truckSize"] as? [String]) ?? []
         let truckWeight = (options["truckWeight"] as? Int) ?? 0
@@ -363,14 +366,14 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
         let olng = originArray[1]
         let originCoordinate = CLLocationCoordinate2D(latitude: olat, longitude: olng)
 
-        print("iOS: Launching NextBillion.ai navigation to: \(lat), \(lng) with mode: \(mode), units: \(units), routeType: \(routeType), avoidances: \(avoidances), truckSize: \(truckSize), truckWeight: \(truckWeight)")
+        print("iOS: Launching NextBillion.ai navigation to: \(lat), \(lng) with mode: \(mode), units: \(units), avoidances: \(avoidances), truckSize: \(truckSize), truckWeight: \(truckWeight)")
         
         DispatchQueue.main.async {
-            self.startNavigation(from: originCoordinate, to: destinationCoordinate, simulate: simulate, mode: mode, units: units, routeType: routeType, avoidances: avoidances, truckSize: truckSize, truckWeight: truckWeight, resolver: resolver, rejecter: rejecter)
+            self.startNavigation(from: originCoordinate, to: destinationCoordinate, simulate: simulate, mode: mode, units: units, avoidances: avoidances, truckSize: truckSize, truckWeight: truckWeight, resolver: resolver, rejecter: rejecter)
         }
     }
     
-    private func startNavigation(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, simulate: Bool, mode: String, units: String, routeType: String, avoidances: [String], truckSize: [String], truckWeight: Int, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
+    private func startNavigation(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, simulate: Bool, mode: String, units: String, avoidances: [String], truckSize: [String], truckWeight: Int, resolver: @escaping RCTPromiseResolveBlock, rejecter: @escaping RCTPromiseRejectBlock) {
         // Get current location (for demo purposes, using a default location)
         let originLocation = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
         let destinationLocation = CLLocation(latitude: destination.latitude, longitude: destination.longitude)
@@ -397,7 +400,7 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
         options.locale = Locale.autoupdatingCurrent
         options.mapOption = .valhalla
         options.shapeFormat = .polyline6
-
+        options.avoid = avoidances
         // Add truck parameters if mode is truck
         if mode == "truck" && !truckSize.isEmpty && truckWeight > 0 {
             // Convert truck size from string array to appropriate format
@@ -411,9 +414,9 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
             }
         }
         
-        // Add route type and avoidances
-        print("iOS: Route type: \(routeType), Avoidances: \(avoidances)")
-        // Note: NextBillion.ai iOS SDK specific route type and avoidances configuration
+        // Add avoidances
+        print("iOS: Avoidances: \(avoidances)")
+        // Note: NextBillion.ai iOS SDK specific avoidances configuration
         // would need to be implemented based on the SDK documentation
         
         // Fetch route
@@ -434,7 +437,8 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
             let simMode: SimulationMode = simulate ? .always : .inTunnels
             let navigationService = NBNavigationService(routes: routes, routeIndex: 0, simulating: simMode)
             let navigationOptions = NavigationOptions(navigationService: navigationService)
-            
+            navigationService.simulationSpeedMultiplier = 10
+            navigationService.delegate = self
             // Store navigation service reference for background listening
             self.navigationService = navigationService
             
@@ -500,6 +504,13 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
             self.isNavigationActive = false
             self.endBackgroundTask()
             
+            // Stop Live Activity when navigation stops
+            if #available(iOS 16.2, *) {
+                if let manager = self.liveActivityManager as? LiveActivityManager {
+                    manager.stopLiveActivity()
+                }
+            }
+            
             resolver(nil)
                 }
             } else {
@@ -550,7 +561,7 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
     private func addCustomUI(to navigationViewController: NavigationViewController) {
         // Create a custom button to return to home screen
         let homeButton = UIButton(type: .system)
-        homeButton.setTitle("<<", for: .normal)
+        homeButton.setTitle("🏠", for: .normal)
         homeButton.setTitleColor(.white, for: .normal)
         homeButton.backgroundColor = UIColor.black.withAlphaComponent(0.7)
         homeButton.layer.cornerRadius = 20
@@ -656,6 +667,13 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
         stopNavigationServiceMonitor()
     }
     
+    private func setupCustomLocalization() {
+        // Override the RESUME string to show "RECENTER" instead of "RE-CENTRE"
+        // This method sets up custom localization by overriding the string in UserDefaults
+        let customStrings = ["RESUME": "RECENTER"]
+        UserDefaults.standard.set(customStrings, forKey: "CustomLocalizedStrings")
+    }
+    
     private func setupAppLifecycleMonitoring() {
         NotificationCenter.default.addObserver(
             self,
@@ -702,6 +720,26 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
         }
     }
     
+    // MARK: - NavigationServiceDelegate
+    
+    func navigationService(_ service: NavigationService, didArriveAt waypoint: Waypoint) {
+        print("🔴 NavigationModule: Arrived at destination - clearing Live Activity")
+        
+        // Clear Live Activity when navigation completes
+        if #available(iOS 16.2, *) {
+            if let manager = self.liveActivityManager as? LiveActivityManager {
+                manager.stopLiveActivity()
+            }
+        }
+        
+        // Set navigation as inactive and end background task
+        self.isNavigationActive = false
+        self.endBackgroundTask()
+        
+        // Send event to React Native
+        self.sendEvent(eventName: "NavigationStopped")
+    }
+    
     // MARK: - NavigationViewControllerDelegate
     
     func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {
@@ -719,6 +757,13 @@ class ReactNativeNextBillionNavigation: NSObject, RCTBridgeModule, NavigationVie
             // Set navigation as inactive and end background task
             self.isNavigationActive = false
             self.endBackgroundTask()
+            
+            // Stop Live Activity when navigation stops
+            if #available(iOS 16.2, *) {
+                if let manager = self.liveActivityManager as? LiveActivityManager {
+                    manager.stopLiveActivity()
+                }
+            }
             
             // Dismiss the navigation view controller to return to home screen
             DispatchQueue.main.async {

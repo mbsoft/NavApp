@@ -69,7 +69,6 @@ function AppContent() {
   // Route parameters
   const [isRouteParamsExpanded, setIsRouteParamsExpanded] = useState(false);
   const [routeAvoidances, setRouteAvoidances] = useState<string[]>([]);
-  const [routeType, setRouteType] = useState<'shortest' | 'fastest'>('fastest');
 
   // Default fallback location - moved outside to avoid dependency issues
   const defaultLocation = React.useMemo(() => ({ lat: 38.9111117447887, lng: -77.04012393951416 }), []);
@@ -452,7 +451,6 @@ function AppContent() {
         simulate: simulateRoute,
         units: 'imperial' as const,
         origin: origin,
-        routeType: routeType,
         avoidances: routeAvoidances,
         ...(navigationMode === 'truck' && {
           truckSize: [truckHeight, truckWidth, truckLength],
@@ -708,41 +706,6 @@ function AppContent() {
           
           {isRouteParamsExpanded && (
             <>
-              {/* Route Type Selector */}
-              <View style={styles.routeTypeContainer}>
-                <Text style={styles.routeTypeLabel}>Route Type:</Text>
-                <View style={styles.routeTypeButtons}>
-                  <TouchableOpacity
-                    style={[
-                      styles.routeTypeButton,
-                      routeType === 'fastest' && styles.routeTypeButtonSelected
-                    ]}
-                    onPress={() => setRouteType('fastest')}
-                  >
-                    <Text style={[
-                      styles.routeTypeButtonText,
-                      routeType === 'fastest' && styles.routeTypeButtonTextSelected
-                    ]}>
-                      Fastest
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.routeTypeButton,
-                      routeType === 'shortest' && styles.routeTypeButtonSelected
-                    ]}
-                    onPress={() => setRouteType('shortest')}
-                  >
-                    <Text style={[
-                      styles.routeTypeButtonText,
-                      routeType === 'shortest' && styles.routeTypeButtonTextSelected
-                    ]}>
-                      Shortest
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              
               {/* Route Avoidances */}
               <View style={styles.avoidancesContainer}>
                 <Text style={styles.avoidancesLabel}>Avoid:</Text>
@@ -1091,41 +1054,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#007AFF',
     fontWeight: 'bold',
-  },
-  routeTypeContainer: {
-    marginBottom: 12,
-  },
-  routeTypeLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#007AFF',
-    marginBottom: 8,
-  },
-  routeTypeButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  routeTypeButton: {
-    flex: 1,
-    backgroundColor: 'white',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    alignItems: 'center',
-  },
-  routeTypeButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  routeTypeButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-  },
-  routeTypeButtonTextSelected: {
-    color: 'white',
   },
   avoidancesContainer: {
     marginBottom: 8,

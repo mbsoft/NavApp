@@ -11,7 +11,6 @@ struct ETAAttributes: ActivityAttributes {
         var isNavigating: Bool
     }
     var destination: String
-    var routeType: String
 }
 
 struct ETAWidgetLiveActivity: Widget {
@@ -26,7 +25,7 @@ struct ETAWidgetLiveActivity: Widget {
                         .font(.headline)
                         .fontWeight(.semibold)
                     Spacer()
-                    Text(context.attributes.routeType.capitalized)
+                    Text("Fastest")
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 2)
@@ -126,7 +125,7 @@ struct ETAWidgetLiveActivity: Widget {
 }
 
 struct ETAWidget_Previews: PreviewProvider {
-    static let attributes = ETAAttributes(destination: "Times Square", routeType: "car")
+    static let attributes = ETAAttributes(destination: "Times Square")
     static let contentState = ETAAttributes.ContentState(
         eta: "14:30",
         instruction: "Turn right onto 42nd Street",

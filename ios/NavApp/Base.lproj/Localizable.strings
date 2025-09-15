@@ -1,0 +1,10 @@
+/* 
+  Localizable.strings
+  NavApp
+
+  Override navigation strings
+*/
+
+/* Override navigation-android re_center string */
+"RESUME" = "RECENTER";
+

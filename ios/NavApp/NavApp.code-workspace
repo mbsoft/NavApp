@@ -4,10 +4,7 @@
 			"path": "../.."
 		},
 		{
-			"path": "../../../ios-navigation-demo"
-		},
-		{
-			"path": "../../../nb-navigation-android-demo"
+			"path": "../../../navigation-ios"
 		}
 	],
 	"settings": {
@@ -22,6 +19,9 @@
 			"**/*tsconfig.json": true,
 			".cache": true,
 			"retool.config.json": true
+		},
+		"[xml]": {
+			"editor.rename.enablePreview": false
 		}
 	}
 }

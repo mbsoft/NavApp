@@ -174,6 +174,53 @@ The implementation includes comprehensive logging:
 - `NavigationModule` - Route calculation and module operations
 - `NavigationActivity` - Activity lifecycle and navigation events
 
+## Localization Customization
+
+### iOS Localization Override
+
+The NextBillion Navigation framework uses binary localization files that may need to be modified to override default text. For example, to change "RE-CENTRE" to "RECENTER":
+
+1. **Locate the framework's localization files:**
+   ```bash
+   find ios/Carthage/Build -name "Localizable.strings" -path "*/NbmapNavigation.framework/*"
+   ```
+
+2. **Backup the original files:**
+   ```bash
+   cp ios/Carthage/Build/NbmapNavigation.xcframework/ios-arm64_x86_64-simulator/NbmapNavigation.framework/Base.lproj/Localizable.strings ios/Carthage/Build/NbmapNavigation.xcframework/ios-arm64_x86_64-simulator/NbmapNavigation.framework/Base.lproj/Localizable.strings.backup
+   ```
+
+3. **Modify the binary plist files using plutil:**
+   ```bash
+   # For simulator build
+   plutil -replace RESUME -string "RECENTER" ios/Carthage/Build/NbmapNavigation.xcframework/ios-arm64_x86_64-simulator/NbmapNavigation.framework/Base.lproj/Localizable.strings
+   
+   # For device build
+   plutil -replace RESUME -string "RECENTER" ios/Carthage/Build/NbmapNavigation.xcframework/ios-arm64/NbmapNavigation.framework/Base.lproj/Localizable.strings
+   ```
+
+4. **Clean and rebuild the project:**
+   ```bash
+   cd ios && xcodebuild clean -workspace NavApp.xcworkspace -scheme NavApp
+   npx react-native run-ios
+   ```
+
+**Important Notes:**
+- These changes are local to your Carthage build and will be lost when updating the framework
+- Document any localization changes for team members
+- Consider creating a script to automate this process
+- The framework uses binary plist files, so `plutil` is required for modifications
+
+### Android Localization
+
+Android localization can be handled through standard Android string resources in `android/app/src/main/res/values/strings.xml`:
+
+```xml
+<resources>
+    <string name="resume">RECENTER</string>
+</resources>
+```
+
 ## Notes
 
 - Both platforms now use the full NextBillion.ai Navigation SDK
@@ -181,3 +228,4 @@ The implementation includes comprehensive logging:
 - iOS implementation uses Carthage for dependency management
 - Location permissions are required for both platforms
 - The app supports simulation mode for testing without real GPS
+- iOS localization requires modifying framework binary files due to framework architecture

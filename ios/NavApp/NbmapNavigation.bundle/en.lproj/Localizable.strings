@@ -1,0 +1,10 @@
+/* 
+  Localizable.strings
+  NbmapNavigation.bundle
+
+  Override navigation strings
+*/
+
+/* Override navigation RESUME string */
+"RESUME" = "RECENTER";
+

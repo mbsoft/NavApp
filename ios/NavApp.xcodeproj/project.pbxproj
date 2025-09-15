@@ -35,6 +35,7 @@
 		8D0D832E2E71A53500D904A6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8D0D832D2E71A53500D904A6 /* WidgetKit.framework */; };
 		8D0D83302E71A53500D904A6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8D0D832F2E71A53500D904A6 /* SwiftUI.framework */; };
 		8D0D83412E71A53700D904A6 /* ETAWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8D0D832C2E71A53500D904A6 /* ETAWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8D2DB7722E744B29007A147B /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8D2DB7702E744B29007A147B /* Localizable.strings */; };
 		9F131D75678A4CB5A62F05F6 /* (null) in Resources */ = {isa = PBXBuildFile; };
 		ACDC68AB55B0455295811F52 /* (null) in Resources */ = {isa = PBXBuildFile; };
 		B17D504F82FA4D0DA34EFFE7 /* (null) in Resources */ = {isa = PBXBuildFile; };
@@ -105,6 +106,7 @@
 		8D0D832F2E71A53500D904A6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		8D0D83472E71A5CD00D904A6 /* ETAWidgetExtensionExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ETAWidgetExtensionExtension.entitlements; sourceTree = "<group>"; };
 		8D0D83482E71A60E00D904A6 /* NavApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = NavApp.entitlements; path = NavApp/NavApp.entitlements; sourceTree = "<group>"; };
+		8D2DB7712E744B29007A147B /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -194,6 +196,7 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
+				8D2DB7702E744B29007A147B /* Localizable.strings */,
 				8D0D83472E71A5CD00D904A6 /* ETAWidgetExtensionExtension.entitlements */,
 				13B07FAE1A68108700A75B9A /* NavApp */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
@@ -318,6 +321,7 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+				8D2DB7722E744B29007A147B /* Localizable.strings in Resources */,
 				F5C96BF016F48AA3441E9141 /* PrivacyInfo.xcprivacy in Resources */,
 				0ACF9251F5D04C079A084992 /* (null) in Resources */,
 				ACDC68AB55B0455295811F52 /* (null) in Resources */,
@@ -460,6 +464,17 @@
 			targetProxy = 8D0D833F2E71A53700D904A6 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		8D2DB7702E744B29007A147B /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				8D2DB7712E744B29007A147B /* en */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {

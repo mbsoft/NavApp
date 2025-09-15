@@ -64,7 +64,6 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
             } else null
             
             // Extract route parameters
-            val routeType = options?.getString("routeType") ?: "fastest"
             val shouldSimulate = options?.getBoolean("simulate") ?: true
             val avoidances = if (options?.hasKey("avoidances") == true) {
                 val avoidancesArray = options.getArray("avoidances")
@@ -81,14 +80,14 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
                 emptyList()
             }
             
-            Log.d("NavigationModule", "Launching NextBillion.ai navigation from: $originLat, $originLng to: $destLat, $destLng with units: $units, mode: $mode, truckSize: $truckSize, truckWeight: $truckWeight, routeType: $routeType, avoidances: $avoidances, simulate: $shouldSimulate")
+            Log.d("NavigationModule", "Launching NextBillion.ai navigation from: $originLat, $originLng to: $destLat, $destLng with units: $units, mode: $mode, truckSize: $truckSize, truckWeight: $truckWeight, avoidances: $avoidances, simulate: $shouldSimulate")
 
             // Create origin and destination points
             val originPoint = Point.fromLngLat(originLng, originLat)
             val destinationPoint = Point.fromLngLat(destLng, destLat)
 
             // Fetch route using NextBillion.ai SDK
-            fetchRoute(originPoint, destinationPoint, activity, promise, units, mode, truckSize, truckWeight, routeType, avoidances, shouldSimulate)
+            fetchRoute(originPoint, destinationPoint, activity, promise, units, mode, truckSize, truckWeight, avoidances, shouldSimulate)
 
         } catch (e: Exception) {
             Log.e("NavigationModule", "Error launching navigation", e)
@@ -135,8 +134,8 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
         }
     }
     
-    private fun fetchRoute(origin: Point, destination: Point, activity: Activity, promise: Promise, units: String, mode: String, truckSize: List<String>?, truckWeight: Int?, routeType: String, avoidances: List<String>, shouldSimulate: Boolean) {
-        Log.d("NavigationModule", "Fetching route from $origin to $destination with units: $units, mode: $mode, truckSize: $truckSize, truckWeight: $truckWeight, routeType: $routeType, avoidances: $avoidances, simulate: $shouldSimulate")
+    private fun fetchRoute(origin: Point, destination: Point, activity: Activity, promise: Promise, units: String, mode: String, truckSize: List<String>?, truckWeight: Int?, avoidances: List<String>, shouldSimulate: Boolean) {
+        Log.d("NavigationModule", "Fetching route from $origin to $destination with units: $units, mode: $mode, truckSize: $truckSize, truckWeight: $truckWeight, avoidances: $avoidances, simulate: $shouldSimulate")
         
         // Create route request with custom parameters including units and mode
         val paramsBuilder = RouteRequestParams.builder()
@@ -154,9 +153,8 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
             .departureTime((System.currentTimeMillis() / 1000).toInt())
             .unit(if (units == "imperial") RequestParamConsts.IMPERIAL else RequestParamConsts.METRIC)
         
-        // Add route type
-        val routeTypeParam = if (routeType == "shortest") RequestParamConsts.SHORTEST_TYPE else RequestParamConsts.FASTEST_TYPE
-        paramsBuilder.routeType(routeTypeParam)
+        // Always use fastest route type
+        paramsBuilder.routeType(RequestParamConsts.FASTEST_TYPE)
         
         // Add avoidances if any
         if (avoidances.isNotEmpty()) {
@@ -184,7 +182,7 @@ class ReactNativeNextBillionNavigationModule(reactContext: ReactApplicationConte
         }
         Log.d("NavigationModule", "Mode: $actualMode (requested: $mode)")
         Log.d("NavigationModule", "Units: ${if (units == "imperial") RequestParamConsts.IMPERIAL else RequestParamConsts.METRIC}")
-        Log.d("NavigationModule", "Route Type: $routeTypeParam")
+        Log.d("NavigationModule", "Route Type: FASTEST (always)")
         Log.d("NavigationModule", "Avoidances: $avoidances")
         Log.d("NavigationModule", "Origin: $origin")
         Log.d("NavigationModule", "Destination: $destination")

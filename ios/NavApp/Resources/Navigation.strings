@@ -1,0 +1,10 @@
+/* 
+  Navigation.strings
+  NbmapNavigation.framework
+
+  Override navigation button strings
+*/
+
+/* Override Resume button title */
+"Resume" = "RECENTER";
+

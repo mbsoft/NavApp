@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">NavApp</string>
+    
+    <!-- Override navigation-android re_center string -->
+    <string name="re_center">RECENTER</string>
+    <string name="navigation_default">https://api.nextbillion.io/tt/style/1/style/22.2.1-9?map=2/basic_street-light&amp;traffic_incidents=2/incidents_light&amp;traffic_flow=2/flow_relative-light</string>
 </resources>
