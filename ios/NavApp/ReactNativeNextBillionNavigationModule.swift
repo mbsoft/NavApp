@@ -89,9 +89,20 @@ class CustomNavigationViewController: NavigationViewController {
         homeButtonAction?()
     }
     
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        print("🏠 CUSTOM_NAV: viewDidLoad called")
+        
+        // Try to configure map style early
+        configureMapStyle()
+    }
+    
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         print("🏠 CUSTOM_NAV: viewDidAppear called")
+        
+        // Configure map style to match Android
+        configureMapStyle()
         
         // Ensure home button is visible after view appears
         if homeButton == nil {
@@ -99,6 +110,24 @@ class CustomNavigationViewController: NavigationViewController {
             setupHomeButton()
         } else {
             print("🏠 CUSTOM_NAV: Home button already exists")
+        }
+    }
+    
+    private func configureMapStyle() {
+        print("🗺️ CUSTOM_NAV: Configuring map style to match Android")
+        
+        // Set the same map style URL as defined in Android strings.xml
+        let styleURL = URL(string: "https://api.nextbillion.io/tt/style/1/style/22.2.1-9?map=2/basic_street-light&traffic_incidents=2/incidents_light&traffic_flow=2/flow_relative-light")
+        
+        if let mapView = self.mapView {
+            print("🗺️ CUSTOM_NAV: Setting map style URL: \(styleURL?.absoluteString ?? "nil")")
+            mapView.styleURL = styleURL
+        } else {
+            print("⚠️ CUSTOM_NAV: MapView not found, will retry in 0.5 seconds")
+            // Retry after a short delay if mapView is not yet available
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.configureMapStyle()
+            }
         }
     }
 }
