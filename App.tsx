@@ -69,9 +69,34 @@ function AppContent() {
   // Route parameters
   const [isRouteParamsExpanded, setIsRouteParamsExpanded] = useState(false);
   const [routeAvoidances, setRouteAvoidances] = useState<string[]>([]);
+  
+  // U-turn avoidance threshold: 26ft = 792.48cm
+  const U_TURN_AVOIDANCE_THRESHOLD_CM = 792.48;
 
   // Default fallback location - moved outside to avoid dependency issues
   const defaultLocation = React.useMemo(() => ({ lat: 38.9111117447887, lng: -77.04012393951416 }), []);
+
+  // Auto-manage U-turn avoidance based on truck length
+  useEffect(() => {
+    const truckLengthCm = parseFloat(truckLength) || 0;
+    const shouldAvoidUturn = truckLengthCm > U_TURN_AVOIDANCE_THRESHOLD_CM;
+    
+    setRouteAvoidances(prevAvoidances => {
+      const hasUturn = prevAvoidances.includes('uturn');
+      
+      if (shouldAvoidUturn && !hasUturn) {
+        // Add U-turn avoidance
+        console.log(`Truck length ${truckLengthCm}cm exceeds ${U_TURN_AVOIDANCE_THRESHOLD_CM}cm threshold. Adding U-turn avoidance.`);
+        return [...prevAvoidances, 'uturn'];
+      } else if (!shouldAvoidUturn && hasUturn) {
+        // Remove U-turn avoidance
+        console.log(`Truck length ${truckLengthCm}cm is within ${U_TURN_AVOIDANCE_THRESHOLD_CM}cm threshold. Removing U-turn avoidance.`);
+        return prevAvoidances.filter(avoidance => avoidance !== 'uturn');
+      }
+      
+      return prevAvoidances;
+    });
+  }, [truckLength]);
 
   // Format distance in imperial units (miles/yards)
   const formatDistanceImperial = (distanceInMiles: number): string => {
@@ -687,6 +712,27 @@ function AppContent() {
                 <Text style={styles.truckParamsNote}>
                   Max: Height 1000cm, Width 5000cm, Length 5000cm, Weight 100000kg
                 </Text>
+                
+                {/* U-turn avoidance indicator */}
+                {(() => {
+                  const truckLengthCm = parseFloat(truckLength) || 0;
+                  const shouldAvoidUturn = truckLengthCm > U_TURN_AVOIDANCE_THRESHOLD_CM;
+                  const truckLengthFt = (truckLengthCm / 30.48).toFixed(1);
+                  
+                  return (
+                    <View style={styles.uturnAvoidanceIndicator}>
+                      <Text style={[
+                        styles.uturnAvoidanceText,
+                        shouldAvoidUturn ? styles.uturnAvoidanceActive : styles.uturnAvoidanceInactive
+                      ]}>
+                        {shouldAvoidUturn 
+                          ? `⚠️ U-turn avoidance enabled (${truckLengthFt}ft > 26ft)`
+                          : `✓ U-turn avoidance disabled (${truckLengthFt}ft ≤ 26ft)`
+                        }
+                      </Text>
+                    </View>
+                  );
+                })()}
               </>
             )}
           </View>
@@ -1029,6 +1075,26 @@ const styles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
     textAlign: 'center',
+  },
+  uturnAvoidanceIndicator: {
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  uturnAvoidanceText: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  uturnAvoidanceActive: {
+    color: '#dc3545', // Red for warning
+  },
+  uturnAvoidanceInactive: {
+    color: '#28a745', // Green for safe
   },
   routeParamsContainer: {
     backgroundColor: '#f0f8ff',

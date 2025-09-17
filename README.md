@@ -71,7 +71,7 @@ This project integrates NextBillion.ai Navigation SDK for both iOS and Android p
        super.onCreate()
        
        // Initialize NextBillion.ai SDK with your API key
-       Nextbillion.getInstance(applicationContext, "opensesame")
+       Nextbillion.getInstance(applicationContext, "YOUR_API_KEY")
        
        loadReactNative(this)
    }
